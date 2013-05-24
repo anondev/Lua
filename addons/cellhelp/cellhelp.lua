@@ -73,6 +73,23 @@ end
 	}
 	players = {'player1', 'player2', 'player3', 'player4'}
 
+	lang = 'en'
+	if settingtab['lang'] ~= nil then
+		lang = settingtab['lang']
+	end
+
+	salvage_locale_cell_short = {}
+	salvage_locale_cell_short['jp'] = {
+		'í‰_','—ä‰_','”ò‰_','Ï‰_','Ê‰_','‘w‰_','•‚‰_','—Ø‰_','—‰_','Œ‰_','•É‰_','–§‰_','—ì‰_','‹¶‰_','ˆÃ‰_','‘º‰_','‡‰_','•‰_','”’‰_','‰_'
+	}
+
+	salvage_re_incoming1 = {}
+	salvage_re_incoming1['en'] = '(%w+) obtains an? ..(%w+) cell..\46'
+	salvage_re_incoming1['jp'] = '(.+)‚ÍA..(.+)‚Ì^‹PŠÇ..‚ğè‚É‚¢‚ê‚½I\46'
+
+	salvage_re_incoming2 = {}
+	salvage_re_incoming2['en'] = '(%w+) obtains an? ..(%w+) cell..\46'
+	salvage_re_incoming2['jp'] = '.+‚ÍA..(.+)‚Ì^‹PŠÇ..‚ğ‚Á‚Ä‚¢‚½I'
 
 function settings_create()
 --	get player's name
@@ -247,7 +264,8 @@ function checkzone()
 end
 
 function event_incoming_text(original, new, color)
-	a,b,name,cell = string.find(original,'(%w+) obtains an? ..(%w+) cell..\46')
+	a,b,name,cell = string.find(original,salvage_re_incoming1[lang])
+	cell = locale_cell_short(cell)
 	if cell ~= nil then
 		if name == player then
 			cell_lots[cell] = 0
@@ -264,10 +282,14 @@ function event_incoming_text(original, new, color)
 		return new, color
 	end
 	
-	a,b,cell2 = string.find(original,'You find an? ..(%w+)..')
+	a,b,cell2 = string.find(original,salvage_re_incoming2[lang])
+	cell2 = locale_cell_short(cell2)
 	if cell2 ~= nil then
 		if cell_lots[cell2] ~= 0 and cell_lots[cell2] ~= nil then
 			new = 'You find a '..string.char(31,158)..cell2..' cell.'..string.char(31,167)..' /Need/'
+			if lang == 'ja' then
+				new = original..' š'
+			end
 		end
 		return new, color
 	end
@@ -278,3 +300,17 @@ function event_unload()
 	send_command('timers d Remaining')
 	send_command('unalias ch2')
 end 
+
+function locale_cell_short(cell)
+	if lang == 'en' then
+		return cell
+	end
+	if cell == nil then
+		return nil
+	end
+	i = salvage_locale_cell_short[lang][cell2]
+	if i == nil then
+		return nil
+	end
+	return salvage_cell_name_short[i]
+end
