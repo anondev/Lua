@@ -62,9 +62,9 @@ end
 	salvage_cell_name_short = {
 		'incus','castellanus','undulatus','cumulus','radiatus','virga','cirrocumulus','stratus','duplicatus','opacus', 'praecipitatio', 'humilus','spissatus', 'pannus', 'fractus','congestus','nimbus','velum','pileus', 'mediocris', 'alex'
 	}
-	salvage_cell_ident = { 
-		'Weapons and Shields', 'Head and Neck', 'Ranged and Ammo', 'Body', 'Hand', 'Earring and Ring', 'Back and Waist', 'Legs and Feet', 'Support Job','Job and Weaponskill', 'Magic', 'HP', 'MP', 'STR', 'DEX', 'VIT', 'AGI', 'INT', 'MND', 'CHR'
-	} 
+	salvage_cell_ident = {
+		'Weapons','Head/Neck','Range','Body','Hands','legs/feet','Ear/Ring','Back/Waist','SapJob','Abirity','Magic','HP','MP','STR','DEX','VIT','AGI','INT','MND','CHR','Alex'
+	}
 	cells_id = { 
 		'5365','5366','5371','5367','5368','5372','5370','5369','5373','5374','5375','5383','5384','5376','5377','5378','5379','5380','5381','5382','2488,5735,5736'
 	}
@@ -85,11 +85,13 @@ end
 
 	salvage_re_incoming1 = {}
 	salvage_re_incoming1['en'] = '(%w+) obtains an? ..(%w+) cell..\46'
-	salvage_re_incoming1['jp'] = '(.+)は、..(.+)の真輝管..を手にいれた！\46'
+	salvage_re_incoming1['jp'] = '(.+)は、..(.+)の真輝管..を手にいれた！'
 
 	salvage_re_incoming2 = {}
-	salvage_re_incoming2['en'] = '(%w+) obtains an? ..(%w+) cell..\46'
-	salvage_re_incoming2['jp'] = '.+は、..(.+)の真輝管..を持っていた！'
+	salvage_re_incoming2['en'] = 'You find an? ..(%w+)..'
+	salvage_re_incoming2['jp'] = { '.+は、..(.+)の真輝管..を持っていた！', '.+に、..(.+)の真輝管..が入っていた！' }
+
+	visible = true
 
 function settings_create()
 --	get player's name
@@ -139,8 +141,10 @@ function event_addon_command(...)
 		elseif params[1]:lower() == "start" then
 			initialize()
 		elseif params[1]:lower() == "hide" then
+			visible = false
 			tb_set_visibility('salvage_box', false)
 		elseif params[1]:lower() == "show" then
+			visible = true
 			tb_set_visibility('salvage_box', true)
 		elseif params[1]:lower() == "set" then
 			if params[2] then
@@ -201,8 +205,9 @@ function orderlots()
 	for i=1, #salvage_cell_name_short  do 
 		if salvage_cell_name_short[i] ~= 'alex' and cell_lots[salvage_cell_name_short[i]] ~= 0 then
 			item = salvage_cell_name_short[i]
+			name = salvage_cell_ident[i]
 			if cell_lots[item] ~= nil and cell_lots[item] ~= 0 then
-				lotorder = (lotorder..item..': '..cell_lots[item]..' \n ')
+				lotorder = (lotorder..name..': '..cell_lots[item]..' \n ')
 			end
 	    elseif salvage_cell_name_short[i] == 'alex' and cell_lots[salvage_cell_name_short[i]] ~= 0 then
 	    	item = salvage_cell_name_short[i]
@@ -249,9 +254,9 @@ function initialize()
 	tb_set_bg_color('salvage_box',200,30,30,30)
 	tb_set_color('salvage_box',255,200,200,200)
 	tb_set_location('salvage_box',posx,posy)
-	tb_set_visibility('salvage_box',1)
+	tb_set_visibility('salvage_box',visible)
 	tb_set_bg_visibility('salvage_box',1)
-	tb_set_font('salvage_box','Arial',12)
+	tb_set_font('salvage_box','MS UI Gothic',12)
 	tb_set_text('salvage_box',' Lot order:  \n'..lotorder);
 end
 
@@ -264,7 +269,7 @@ function checkzone()
 end
 
 function event_incoming_text(original, new, color)
-	a,b,name,cell = string.find(original,salvage_re_incoming1[lang])
+	a,b,name,cell = mfind(original,salvage_re_incoming1[lang])
 	cell = locale_cell_short(cell)
 	if cell ~= nil then
 		if name == player then
@@ -282,13 +287,13 @@ function event_incoming_text(original, new, color)
 		return new, color
 	end
 	
-	a,b,cell2 = string.find(original,salvage_re_incoming2[lang])
+	a,b,cell2 = mfind(original,salvage_re_incoming2[lang])
 	cell2 = locale_cell_short(cell2)
 	if cell2 ~= nil then
 		if cell_lots[cell2] ~= 0 and cell_lots[cell2] ~= nil then
 			new = 'You find a '..string.char(31,158)..cell2..' cell.'..string.char(31,167)..' /Need/'
-			if lang == 'ja' then
-				new = original..' ★'
+			if lang == 'jp' then
+				new = '★ '..original..' ★'
 			end
 		end
 		return new, color
@@ -308,9 +313,32 @@ function locale_cell_short(cell)
 	if cell == nil then
 		return nil
 	end
-	i = salvage_locale_cell_short[lang][cell2]
-	if i == nil then
+	i = tbidx(salvage_locale_cell_short[lang], cell)
+	if i == nil or i == 0 then
 		return nil
 	end
 	return salvage_cell_name_short[i]
+end
+
+function mfind(s, re)
+	if type(re) == 'table' then
+		for i=1, #re do
+			a = string.find(s,re[i])
+			if a ~= nil then
+				return string.find(s,re[i])
+			end
+			return nil
+		end
+	else
+		return string.find(s,re)
+	end
+end
+
+function tbidx(t, key)
+	for i=1, #t do
+		if t[i] == key then
+			return i
+		end
+	end
+	return 0
 end
