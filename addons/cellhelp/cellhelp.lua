@@ -293,7 +293,7 @@ function event_unload()
 	io.open(lua_base_path..'../../plugins/ll/salvage-'..player..'.txt',"w"):write(''):close()
 	tb_delete('salvage_box')
 	send_command('timers d Remaining')
-	send_command('unalias ch2')
+	send_command('unalias ch')
 end 
 
 --multibyte cell name to salvage_cell_name_short
