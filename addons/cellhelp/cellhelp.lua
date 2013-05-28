@@ -55,6 +55,11 @@ end
 		posx = settingtab['posx']
 		posy = settingtab['posy']
 	end	
+	lang = 'en'
+	if settingtab['lang'] ~= nil then
+		lang = settingtab['lang']
+	end
+	visible = true
 	itemcount = 0
 	salvage_cell_name = {
 		'incus cell','castellanus cell','undulatus cell','cumulus cell','radiatus cell','virga cell','cirrocumulus cell','stratus cell','duplicatus cell','opacus cell', 'praecipitatio cell', 'humilus cell','spissatus cell', 'pannus cell', 'fractus cell','congestus cell',  'nimbus cell', 'velum cell','pileus cell', 'mediocris cell'
@@ -73,25 +78,12 @@ end
 	}
 	players = {'player1', 'player2', 'player3', 'player4'}
 
-	lang = 'en'
-	if settingtab['lang'] ~= nil then
-		lang = settingtab['lang']
-	end
-
-	salvage_locale_cell_short = {}
-	salvage_locale_cell_short['jp'] = {
-		'êÌâ_','ó‰â_','îÚâ_','êœâ_','ç â_','ëwâ_','ïÇâ_','óÿâ_','óêâ_','èåâ_','ï…â_','ñßâ_','óÏâ_','ã∂â_','à√â_','ë∫â_','éáâ_','çïâ_','îíâ_','êêâ_'
+	locale_scripts = {
+		en = 'data\\locale_en.lua',
+		jp = 'data\\locale_jp.lua'
 	}
 
-	salvage_re_incoming1 = {}
-	salvage_re_incoming1['en'] = '(%w+) obtains an? ..(%w+) cell..\46'
-	salvage_re_incoming1['jp'] = '(.+)ÇÕÅA..(.+)ÇÃê^ãPä«..ÇéËÇ…Ç¢ÇÍÇΩÅI'
-
-	salvage_re_incoming2 = {}
-	salvage_re_incoming2['en'] = 'You find an? ..(%w+)..'
-	salvage_re_incoming2['jp'] = { '.+ÇÕÅA..(.+)ÇÃê^ãPä«..ÇéùÇ¡ÇƒÇ¢ÇΩÅI', '.+Ç…ÅA..(.+)ÇÃê^ãPä«..Ç™ì¸Ç¡ÇƒÇ¢ÇΩÅI' }
-
-	visible = true
+	locale = require(locale_scripts[lang]).locale()
 
 function settings_create()
 --	get player's name
@@ -269,8 +261,8 @@ function checkzone()
 end
 
 function event_incoming_text(original, new, color)
-	a,b,name,cell = mfind(original,salvage_re_incoming1[lang])
-	cell = locale_cell_short(cell)
+	a,b,name,cell = find_any(original,locale.incoming_re1)
+	cell = get_ident_name(cell)
 	if cell ~= nil then
 		if name == player then
 			cell_lots[cell] = 0
@@ -287,40 +279,38 @@ function event_incoming_text(original, new, color)
 		return new, color
 	end
 	
-	a,b,cell2 = mfind(original,salvage_re_incoming2[lang])
-	cell2 = locale_cell_short(cell2)
+	a,b,cell2 = find_any(original,locale.incoming_re1)
+	cell2 = get_ident_name(cell2)
 	if cell2 ~= nil then
 		if cell_lots[cell2] ~= 0 and cell_lots[cell2] ~= nil then
-			new = 'You find a '..string.char(31,158)..cell2..' cell.'..string.char(31,167)..' /Need/'
-			if lang == 'jp' then
-				new = 'Åö '..original..' Åö'
-			end
+			new = locale.create_incoming_need(original,cell2)
 		end
 		return new, color
 	end
 end	
 
 function event_unload()
+	io.open(lua_base_path..'../../plugins/ll/salvage-'..player..'.txt',"w"):write(''):close()
 	tb_delete('salvage_box')
 	send_command('timers d Remaining')
 	send_command('unalias ch2')
 end 
 
-function locale_cell_short(cell)
-	if lang == 'en' then
-		return cell
-	end
+--multibyte cell name to salvage_cell_name_short
+function get_ident_name(cell)
 	if cell == nil then
 		return nil
 	end
-	i = tbidx(salvage_locale_cell_short[lang], cell)
+	i = get_table_index(locale.cell_short,cell)
 	if i == nil or i == 0 then
 		return nil
 	end
 	return salvage_cell_name_short[i]
 end
 
-function mfind(s, re)
+--To return a valid string.find found first
+--lua don't support 'aaa|bbb' regex
+function find_any(s, re)
 	if type(re) == 'table' then
 		for i=1, #re do
 			a = string.find(s,re[i])
@@ -334,9 +324,11 @@ function mfind(s, re)
 	end
 end
 
-function tbidx(t, key)
+--value to index
+--when table[1]='multibyte string', table['multibyte string'] is nil
+function get_table_index(t, value)
 	for i=1, #t do
-		if t[i] == key then
+		if t[i] == value then
 			return i
 		end
 	end
