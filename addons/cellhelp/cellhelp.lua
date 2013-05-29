@@ -79,8 +79,8 @@ end
 	players = {'player1', 'player2', 'player3', 'player4'}
 
 	locale_scripts = {
-		en = 'data\\locale_en.lua',
-		jp = 'data\\locale_jp.lua'
+		en = 'data\\locale_en',
+		jp = 'data\\locale_jp'
 	}
 
 	locale = require(locale_scripts[lang]).locale()
@@ -239,6 +239,7 @@ function lightluggage()
 	end
 	
 	io.open(lua_base_path..'../../plugins/ll/salvage-'..player..'.txt',"w"):write(llprofile):close()
+	send_command('ll profile salvage-'..player..'.txt')
 end
 
 function initialize()
